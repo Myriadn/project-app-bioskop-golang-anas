@@ -1,0 +1,3 @@
+run:
+	@echo running app...
+	go run main.go
