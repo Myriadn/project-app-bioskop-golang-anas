@@ -21,15 +21,7 @@ func NewPaymentMethodHandler(paymentMethodService service.PaymentMethodService, 
 	}
 }
 
-// GetAllPaymentMethods godoc
-// @Summary Get all payment methods
-// @Description Get list of all available payment methods
-// @Tags payment-methods
-// @Accept json
-// @Produce json
-// @Success 200 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/payment-methods [get]
+// Get list of all available payment methods
 func (h *PaymentMethodHandler) GetAllPaymentMethods(w http.ResponseWriter, r *http.Request) {
 	methods, err := h.paymentMethodService.GetAllPaymentMethods(r.Context())
 	if err != nil {

@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"project-app-bioskop-golang-homework-anas/internal/domain"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PaymentMethodRepository interface {
@@ -16,10 +14,10 @@ type PaymentMethodRepository interface {
 }
 
 type paymentMethodRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewPaymentMethodRepository(db *pgxpool.Pool) PaymentMethodRepository {
+func NewPaymentMethodRepository(db PgxPool) PaymentMethodRepository {
 	return &paymentMethodRepository{db: db}
 }
 

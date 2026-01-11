@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"project-app-bioskop-golang-homework-anas/internal/domain"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type SeatRepository interface {
@@ -16,10 +14,10 @@ type SeatRepository interface {
 }
 
 type seatRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewSeatRepository(db *pgxpool.Pool) SeatRepository {
+func NewSeatRepository(db PgxPool) SeatRepository {
 	return &seatRepository{db: db}
 }
 

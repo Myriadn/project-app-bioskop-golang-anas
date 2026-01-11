@@ -24,17 +24,7 @@ func NewAuthHandler(authService service.AuthService, logger *zap.Logger) *AuthHa
 	}
 }
 
-// Register godoc
-// @Summary Register new user
-// @Description Register a new user account
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body domain.RegisterRequest true "Register Request"
-// @Success 201 {object} utils.Response
-// @Failure 400 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/register [post]
+// Register a new user account
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req domain.RegisterRequest
 
@@ -64,18 +54,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	utils.SendCreated(w, "User registered successfully", authResp)
 }
 
-// Login godoc
-// @Summary User login
-// @Description Login with username and password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body domain.LoginRequest true "Login Request"
-// @Success 200 {object} utils.Response
-// @Failure 400 {object} utils.Response
-// @Failure 401 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/login [post]
+// Login with username and password
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req domain.LoginRequest
 
@@ -105,17 +84,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	utils.SendSuccess(w, "Login successful", authResp)
 }
 
-// Logout godoc
-// @Summary User logout
-// @Description Logout and invalidate token
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} utils.Response
-// @Failure 401 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/logout [post]
+// Logout and invalidate token
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	// Get token from header
 	token := r.Header.Get("Authorization")

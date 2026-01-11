@@ -9,7 +9,6 @@ import (
 	"project-app-bioskop-golang-homework-anas/internal/domain"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AuthTokenRepository interface {
@@ -21,10 +20,10 @@ type AuthTokenRepository interface {
 }
 
 type authTokenRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewAuthTokenRepository(db *pgxpool.Pool) AuthTokenRepository {
+func NewAuthTokenRepository(db PgxPool) AuthTokenRepository {
 	return &authTokenRepository{db: db}
 }
 

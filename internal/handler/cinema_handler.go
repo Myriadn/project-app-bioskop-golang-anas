@@ -23,17 +23,7 @@ func NewCinemaHandler(cinemaService service.CinemaService, logger *zap.Logger) *
 	}
 }
 
-// GetAllCinemas godoc
-// @Summary Get all cinemas
-// @Description Get list of all cinemas with pagination
-// @Tags cinemas
-// @Accept json
-// @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param limit query int false "Limit per page" default(10)
-// @Success 200 {object} utils.PaginatedResponse
-// @Failure 500 {object} utils.Response
-// @Router /api/cinemas [get]
+// Get list of all cinemas with pagination
 func (h *CinemaHandler) GetAllCinemas(w http.ResponseWriter, r *http.Request) {
 	// Get pagination parameters from query
 	page := 1
@@ -68,18 +58,7 @@ func (h *CinemaHandler) GetAllCinemas(w http.ResponseWriter, r *http.Request) {
 	utils.SendPaginated(w, "Cinemas retrieved successfully", cinemas, meta)
 }
 
-// GetCinemaByID godoc
-// @Summary Get cinema by ID
-// @Description Get detailed information of a specific cinema
-// @Tags cinemas
-// @Accept json
-// @Produce json
-// @Param cinemaId path int true "Cinema ID"
-// @Success 200 {object} utils.Response
-// @Failure 400 {object} utils.Response
-// @Failure 404 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/cinemas/{cinemaId} [get]
+// Get detailed information of a specific cinema
 func (h *CinemaHandler) GetCinemaByID(w http.ResponseWriter, r *http.Request) {
 	// Get cinema ID from URL parameter
 	cinemaIDStr := chi.URLParam(r, "cinemaId")

@@ -4,6 +4,24 @@ Aplikasi Cinema Booking System berbasis RESTful API menggunakan bahasa pemrogram
 
 Aplikasi ini bertujuan untuk membantu pengguna (customer) dalam melakukan pendaftaran akun, login, memilih bioskop, mengecek ketersediaan kursi, melakukan pemesanan kursi, serta melakukan pembayaran tiket.
 
+## Video Summary
+
+[Summary Video]()
+
+## Installation
+
+1. Setup database with PostgreSQL. and inject the data in `lampiran/backup-database.sql`
+2. Sync library : `go mod tidy`
+3. Run the app: `go run cmd/api/main.go` or `make run`
+4. Testing with Postman. checkout lampiran folder.
+
+## Coverage Test
+
+`go test ./internal/repository/... -cover
+ok  	project-app-bioskop-golang-homework-anas/internal/repository	0.630s	coverage: 68.8% of statements
+go test ./internal/service/... -cover
+ok  	project-app-bioskop-golang-homework-anas/internal/service	0.721s	coverage: 51.0% of statements`
+
 ## Payment Doc
 
 1. Credit Card

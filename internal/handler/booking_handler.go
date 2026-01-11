@@ -25,19 +25,7 @@ func NewBookingHandler(bookingService service.BookingService, logger *zap.Logger
 	}
 }
 
-// CreateBooking godoc
-// @Summary Create a new booking
-// @Description Create a new ticket booking for a specific showtime and seat
-// @Tags bookings
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body domain.BookingRequest true "Booking Request"
-// @Success 201 {object} utils.Response
-// @Failure 400 {object} utils.Response
-// @Failure 401 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/booking [post]
+// Create a new ticket booking for a specific showtime and seat
 func (h *BookingHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	// Get user from context (set by auth middleware)
 	user, ok := middleware.GetUserFromContext(r.Context())
@@ -83,17 +71,7 @@ func (h *BookingHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	utils.SendCreated(w, "Booking created successfully", booking)
 }
 
-// GetUserBookings godoc
-// @Summary Get user booking history
-// @Description Get all bookings for the authenticated user
-// @Tags bookings
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} utils.Response
-// @Failure 401 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/user/bookings [get]
+// Get all bookings for the authenticated user
 func (h *BookingHandler) GetUserBookings(w http.ResponseWriter, r *http.Request) {
 	// Get user from context (set by auth middleware)
 	user, ok := middleware.GetUserFromContext(r.Context())

@@ -9,7 +9,6 @@ import (
 	"project-app-bioskop-golang-homework-anas/internal/domain"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type OTPRepository interface {
@@ -21,10 +20,10 @@ type OTPRepository interface {
 }
 
 type otpRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewOTPRepository(db *pgxpool.Pool) OTPRepository {
+func NewOTPRepository(db PgxPool) OTPRepository {
 	return &otpRepository{db: db}
 }
 

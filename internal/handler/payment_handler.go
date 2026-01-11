@@ -24,17 +24,7 @@ func NewPaymentHandler(paymentService service.PaymentService, logger *zap.Logger
 	}
 }
 
-// ProcessPayment godoc
-// @Summary Process payment for booking
-// @Description Process payment for an existing booking
-// @Tags payments
-// @Accept json
-// @Produce json
-// @Param request body domain.PaymentRequest true "Payment Request"
-// @Success 200 {object} utils.Response
-// @Failure 400 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/pay [post]
+// Process payment for an existing booking
 func (h *PaymentHandler) ProcessPayment(w http.ResponseWriter, r *http.Request) {
 	var req domain.PaymentRequest
 

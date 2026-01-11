@@ -9,7 +9,6 @@ import (
 	"project-app-bioskop-golang-homework-anas/internal/domain"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type BookingRepository interface {
@@ -21,10 +20,10 @@ type BookingRepository interface {
 }
 
 type bookingRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewBookingRepository(db *pgxpool.Pool) BookingRepository {
+func NewBookingRepository(db PgxPool) BookingRepository {
 	return &bookingRepository{db: db}
 }
 

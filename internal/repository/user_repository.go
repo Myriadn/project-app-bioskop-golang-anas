@@ -9,7 +9,6 @@ import (
 	"project-app-bioskop-golang-homework-anas/internal/domain"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserRepository interface {
@@ -21,10 +20,10 @@ type UserRepository interface {
 }
 
 type userRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewUserRepository(db *pgxpool.Pool) UserRepository {
+func NewUserRepository(db PgxPool) UserRepository {
 	return &userRepository{db: db}
 }
 

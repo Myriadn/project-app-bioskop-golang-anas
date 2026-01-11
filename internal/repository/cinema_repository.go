@@ -8,7 +8,6 @@ import (
 	"project-app-bioskop-golang-homework-anas/internal/domain"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CinemaRepository interface {
@@ -17,10 +16,10 @@ type CinemaRepository interface {
 }
 
 type cinemaRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewCinemaRepository(db *pgxpool.Pool) CinemaRepository {
+func NewCinemaRepository(db PgxPool) CinemaRepository {
 	return &cinemaRepository{db: db}
 }
 

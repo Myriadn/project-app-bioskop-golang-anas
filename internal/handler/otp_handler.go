@@ -24,17 +24,7 @@ func NewOTPHandler(otpService service.OTPService, logger *zap.Logger) *OTPHandle
 	}
 }
 
-// VerifyOTP godoc
-// @Summary Verify OTP code
-// @Description Verify email using OTP code sent to user's email
-// @Tags otp
-// @Accept json
-// @Produce json
-// @Param request body domain.VerifyOTPRequest true "Verify OTP Request"
-// @Success 200 {object} utils.Response
-// @Failure 400 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/verify-otp [post]
+// Verify email using OTP code sent to user's email
 func (h *OTPHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	var req domain.VerifyOTPRequest
 
@@ -66,17 +56,7 @@ func (h *OTPHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	utils.SendSuccess(w, "Email verified successfully! You can now login.", nil)
 }
 
-// ResendOTP godoc
-// @Summary Resend OTP code
-// @Description Resend OTP code to user's email
-// @Tags otp
-// @Accept json
-// @Produce json
-// @Param request body domain.ResendOTPRequest true "Resend OTP Request"
-// @Success 200 {object} utils.Response
-// @Failure 400 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/resend-otp [post]
+// Resend OTP code to user's email
 func (h *OTPHandler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 	var req domain.ResendOTPRequest
 

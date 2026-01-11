@@ -23,20 +23,7 @@ func NewSeatHandler(seatService service.SeatService, logger *zap.Logger) *SeatHa
 	}
 }
 
-// GetSeatAvailability godoc
-// @Summary Get seat availability
-// @Description Get seat availability for a specific cinema, date, and time
-// @Tags seats
-// @Accept json
-// @Produce json
-// @Param cinemaId path int true "Cinema ID"
-// @Param date query string true "Show date (YYYY-MM-DD)"
-// @Param time query string true "Show time (HH:MM:SS)"
-// @Success 200 {object} utils.Response
-// @Failure 400 {object} utils.Response
-// @Failure 404 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /api/cinemas/{cinemaId}/seats [get]
+// Get seat availability for a specific cinema, date, and time
 func (h *SeatHandler) GetSeatAvailability(w http.ResponseWriter, r *http.Request) {
 	// Get cinema ID from URL parameter
 	cinemaIDStr := chi.URLParam(r, "cinemaId")

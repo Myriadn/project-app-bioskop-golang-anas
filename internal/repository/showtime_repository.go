@@ -7,7 +7,6 @@ import (
 	"project-app-bioskop-golang-homework-anas/internal/domain"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ShowtimeRepository interface {
@@ -16,10 +15,10 @@ type ShowtimeRepository interface {
 }
 
 type showtimeRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewShowtimeRepository(db *pgxpool.Pool) ShowtimeRepository {
+func NewShowtimeRepository(db PgxPool) ShowtimeRepository {
 	return &showtimeRepository{db: db}
 }
 

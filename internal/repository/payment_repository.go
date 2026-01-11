@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"project-app-bioskop-golang-homework-anas/internal/domain"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PaymentRepository interface {
@@ -17,10 +15,10 @@ type PaymentRepository interface {
 }
 
 type paymentRepository struct {
-	db *pgxpool.Pool
+	db PgxPool
 }
 
-func NewPaymentRepository(db *pgxpool.Pool) PaymentRepository {
+func NewPaymentRepository(db PgxPool) PaymentRepository {
 	return &paymentRepository{db: db}
 }
 
