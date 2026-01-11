@@ -1,3 +1,8 @@
 run:
 	@echo running app...
-	go run main.go
+	go run cmd/api/main.go
+
+sync:
+	@echo syncinc...
+	go mod tidy
+	make run
