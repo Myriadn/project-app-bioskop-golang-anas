@@ -15,6 +15,7 @@ import (
 	"project-app-bioskop-golang-homework-anas/internal/repository"
 	"project-app-bioskop-golang-homework-anas/internal/router"
 	"project-app-bioskop-golang-homework-anas/internal/service"
+	"project-app-bioskop-golang-homework-anas/internal/utils"
 	"project-app-bioskop-golang-homework-anas/pkg/database"
 	"project-app-bioskop-golang-homework-anas/pkg/logger"
 	"project-app-bioskop-golang-homework-anas/pkg/validator"
@@ -55,9 +56,21 @@ func main() {
 	}
 	defer database.ClosePool(db, logger.Log)
 
+	// Initialize Email Service
+	emailService := utils.NewEmailService(
+		cfg.SMTP.Host,
+		cfg.SMTP.Port,
+		cfg.SMTP.Username,
+		cfg.SMTP.Password,
+		cfg.SMTP.From,
+		logger.Log,
+	)
+	logger.Info("Email service initialized")
+
 	// Initialize Repositories
 	userRepo := repository.NewUserRepository(db)
 	authTokenRepo := repository.NewAuthTokenRepository(db)
+	otpRepo := repository.NewOTPRepository(db) // ← ADDED
 	cinemaRepo := repository.NewCinemaRepository(db)
 	showtimeRepo := repository.NewShowtimeRepository(db)
 	seatRepo := repository.NewSeatRepository(db)
@@ -67,18 +80,19 @@ func main() {
 	logger.Info("Repositories initialized")
 
 	// Initialize Services
-	authService := service.NewAuthService(userRepo, authTokenRepo, cfg, logger.Log)
+	otpService := service.NewOTPService(otpRepo, userRepo, emailService, logger.Log)            // ← ADDED
+	authService := service.NewAuthService(userRepo, authTokenRepo, otpService, cfg, logger.Log) // ← MODIFIED
 	cinemaService := service.NewCinemaService(cinemaRepo, logger.Log)
 	seatService := service.NewSeatService(seatRepo, showtimeRepo, cinemaRepo, logger.Log)
 	paymentMethodService := service.NewPaymentMethodService(paymentMethodRepo, logger.Log)
 	bookingService := service.NewBookingService(bookingRepo, showtimeRepo, seatRepo, paymentMethodRepo, logger.Log)
 	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, paymentMethodRepo, logger.Log)
-
-	backgroundService := service.NewBackgroundService(authTokenRepo, logger.Log)
+	backgroundService := service.NewBackgroundService(authTokenRepo, otpRepo, logger.Log) // ← MODIFIED
 	logger.Info("Services initialized")
 
 	// Initialize Handlers
 	authHandler := handler.NewAuthHandler(authService, logger.Log)
+	otpHandler := handler.NewOTPHandler(otpService, logger.Log)
 	cinemaHandler := handler.NewCinemaHandler(cinemaService, logger.Log)
 	seatHandler := handler.NewSeatHandler(seatService, logger.Log)
 	paymentMethodHandler := handler.NewPaymentMethodHandler(paymentMethodService, logger.Log)
@@ -98,6 +112,7 @@ func main() {
 		paymentMethodHandler,
 		bookingHandler,
 		paymentHandler,
+		otpHandler,
 		authMiddleware,
 		logger.Log,
 	)
@@ -113,25 +128,28 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	//  Start background jobs
-	backgroundService.StartTokenCleanup(1 * time.Hour) // Cleanup every 1 hour
+	// Start background jobs
+	backgroundService.StartTokenCleanup(1 * time.Hour)
+	backgroundService.StartOTPCleanup(30 * time.Minute) // cleanup every 30 min
 	logger.Info("Background jobs started")
 
 	// Start server in goroutine
 	go func() {
 		logger.Info("Server starting", zap.String("address", server.Addr))
-		fmt.Printf("\nCinema Booking API is running on http://localhost%s\n\n", server.Addr)
-		fmt.Printf("Available Endpoints:\n")
-		fmt.Printf("PUBLIC ENDPOINTS:\n")
+		fmt.Printf("\n Cinema Booking API is running on http://localhost%s\n\n", server.Addr)
+		fmt.Printf(" Available Endpoints:\n")
+		fmt.Printf(" PUBLIC ENDPOINTS:\n")
 		fmt.Printf("   GET  /health                          - Health check\n")
 		fmt.Printf("   POST /api/register                    - Register user\n")
 		fmt.Printf("   POST /api/login                       - Login user\n")
+		fmt.Printf("   POST /api/verify-otp                  - Verify OTP \n")
+		fmt.Printf("   POST /api/resend-otp                  - Resend OTP \n")
 		fmt.Printf("   GET  /api/cinemas                     - Get all cinemas\n")
 		fmt.Printf("   GET  /api/cinemas/{id}                - Get cinema detail\n")
 		fmt.Printf("   GET  /api/cinemas/{id}/seats          - Get seat availability\n")
 		fmt.Printf("   GET  /api/payment-methods             - Get payment methods\n")
 		fmt.Printf("   POST /api/pay                         - Process payment\n")
-		fmt.Printf("\nPROTECTED ENDPOINTS (Require Token):\n")
+		fmt.Printf("\n PROTECTED ENDPOINTS (Require Token):\n")
 		fmt.Printf("   POST /api/logout                      - Logout user\n")
 		fmt.Printf("   POST /api/booking                     - Create booking\n")
 		fmt.Printf("   GET  /api/user/bookings               - Get user bookings\n")
@@ -148,6 +166,9 @@ func main() {
 
 	logger.Info("Server shutting down...")
 	fmt.Println("\nShutting down server...")
+
+	backgroundService.Stop()
+	logger.Info("Background jobs stopped")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

@@ -18,6 +18,7 @@ type Router struct {
 	paymentMethodHandler *handler.PaymentMethodHandler
 	bookingHandler       *handler.BookingHandler
 	paymentHandler       *handler.PaymentHandler
+	otpHandler           *handler.OTPHandler
 	authMiddleware       *middleware.AuthMiddleware
 	logger               *zap.Logger
 }
@@ -29,6 +30,7 @@ func NewRouter(
 	paymentMethodHandler *handler.PaymentMethodHandler,
 	bookingHandler *handler.BookingHandler,
 	paymentHandler *handler.PaymentHandler,
+	otpHandler *handler.OTPHandler,
 	authMiddleware *middleware.AuthMiddleware,
 	logger *zap.Logger,
 ) *Router {
@@ -39,6 +41,7 @@ func NewRouter(
 		paymentMethodHandler: paymentMethodHandler,
 		bookingHandler:       bookingHandler,
 		paymentHandler:       paymentHandler,
+		otpHandler:           otpHandler,
 		authMiddleware:       authMiddleware,
 		logger:               logger,
 	}
@@ -64,6 +67,9 @@ func (rt *Router) SetupRoutes() http.Handler {
 	r.Route("/api", func(r chi.Router) {
 		// Auth routes (public)
 		rt.setupAuthRoutes(r)
+
+		// OTP routes (public)
+		rt.setupOTPRoutes(r)
 
 		// Cinema routes (public)
 		rt.setupCinemaRoutes(r)
@@ -96,6 +102,12 @@ func (rt *Router) SetupRoutes() http.Handler {
 func (rt *Router) setupAuthRoutes(r chi.Router) {
 	r.Post("/register", rt.authHandler.Register)
 	r.Post("/login", rt.authHandler.Login)
+}
+
+// setupOTPRoutes mengatur routing untuk OTP
+func (rt *Router) setupOTPRoutes(r chi.Router) {
+	r.Post("/verify-otp", rt.otpHandler.VerifyOTP)
+	r.Post("/resend-otp", rt.otpHandler.ResendOTP)
 }
 
 // setupCinemaRoutes mengatur routing untuk cinema

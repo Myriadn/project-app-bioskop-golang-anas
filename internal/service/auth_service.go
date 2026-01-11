@@ -23,23 +23,26 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepo  repository.UserRepository
-	tokenRepo repository.AuthTokenRepository
-	config    *config.Config
-	logger    *zap.Logger
+	userRepo   repository.UserRepository
+	tokenRepo  repository.AuthTokenRepository
+	otpService OTPService
+	config     *config.Config
+	logger     *zap.Logger
 }
 
 func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenRepo repository.AuthTokenRepository,
+	otpService OTPService,
 	config *config.Config,
 	logger *zap.Logger,
 ) AuthService {
 	return &authService{
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
-		config:    config,
-		logger:    logger,
+		userRepo:   userRepo,
+		tokenRepo:  tokenRepo,
+		otpService: otpService,
+		config:     config,
+		logger:     logger,
 	}
 }
 
@@ -68,7 +71,7 @@ func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest)
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: hashedPassword,
-		IsVerified:   false, // Default false, bisa di-set true jika tidak pakai email verification
+		IsVerified:   false, // Default false - need email verification
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -79,7 +82,14 @@ func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest)
 	s.logger.Info("User registered successfully",
 		zap.Int("user_id", user.ID),
 		zap.String("username", user.Username),
+		zap.String("email", user.Email),
 	)
+
+	// 🚀 Send OTP email (async via goroutine inside OTPService)
+	if err := s.otpService.SendOTP(ctx, user.ID, user.Email, user.Username); err != nil {
+		s.logger.Error("Failed to send OTP", zap.Error(err))
+		// Don't fail registration if email fails
+	}
 
 	// Generate token
 	tokenString, err := s.generateToken(ctx, user.ID)
@@ -109,9 +119,15 @@ func (s *authService) Login(ctx context.Context, req *domain.LoginRequest) (*dom
 		return nil, errors.New("invalid username or password")
 	}
 
+	// Uncomment this if you want to enforce email verification before login
+	// if !user.IsVerified {
+	// 	return nil, errors.New("please verify your email before login")
+	// }
+
 	s.logger.Info("User logged in successfully",
 		zap.Int("user_id", user.ID),
 		zap.String("username", user.Username),
+		zap.Bool("is_verified", user.IsVerified),
 	)
 
 	// Generate token

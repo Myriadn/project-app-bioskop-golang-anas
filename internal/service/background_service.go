@@ -11,21 +11,25 @@ import (
 
 type BackgroundService interface {
 	StartTokenCleanup(interval time.Duration)
+	StartOTPCleanup(interval time.Duration)
 	Stop()
 }
 
 type backgroundService struct {
 	tokenRepo repository.AuthTokenRepository
+	otpRepo   repository.OTPRepository
 	logger    *zap.Logger
 	stopChan  chan bool
 }
 
 func NewBackgroundService(
 	tokenRepo repository.AuthTokenRepository,
+	otpRepo repository.OTPRepository,
 	logger *zap.Logger,
 ) BackgroundService {
 	return &backgroundService{
 		tokenRepo: tokenRepo,
+		otpRepo:   otpRepo,
 		logger:    logger,
 		stopChan:  make(chan bool),
 	}
@@ -35,7 +39,6 @@ func NewBackgroundService(
 func (s *backgroundService) StartTokenCleanup(interval time.Duration) {
 	s.logger.Info("Starting token cleanup background job", zap.Duration("interval", interval))
 
-	// Run in goroutine
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
@@ -52,11 +55,30 @@ func (s *backgroundService) StartTokenCleanup(interval time.Duration) {
 	}()
 }
 
+// StartOTPCleanup menjalankan background job untuk cleanup expired OTPs
+func (s *backgroundService) StartOTPCleanup(interval time.Duration) {
+	s.logger.Info("Starting OTP cleanup background job", zap.Duration("interval", interval))
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				s.cleanupExpiredOTPs()
+			case <-s.stopChan:
+				s.logger.Info("OTP cleanup background job stopped")
+				return
+			}
+		}
+	}()
+}
+
 func (s *backgroundService) cleanupExpiredTokens() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Run cleanup in goroutine
 	go func() {
 		s.logger.Info("Running token cleanup...")
 
@@ -67,6 +89,23 @@ func (s *backgroundService) cleanupExpiredTokens() {
 		}
 
 		s.logger.Info("Token cleanup completed successfully")
+	}()
+}
+
+func (s *backgroundService) cleanupExpiredOTPs() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	go func() {
+		s.logger.Info("Running OTP cleanup...")
+
+		err := s.otpRepo.DeleteExpired(ctx)
+		if err != nil {
+			s.logger.Error("Failed to cleanup expired OTPs", zap.Error(err))
+			return
+		}
+
+		s.logger.Info("OTP cleanup completed successfully")
 	}()
 }
 
