@@ -7,6 +7,7 @@ import (
 
 	"project-app-bioskop-golang-homework-anas/internal/domain"
 	"project-app-bioskop-golang-homework-anas/internal/repository"
+	"project-app-bioskop-golang-homework-anas/internal/utils"
 
 	"go.uber.org/zap"
 )
@@ -37,14 +38,14 @@ func NewPaymentService(
 }
 
 func (s *paymentService) ProcessPayment(ctx context.Context, req *domain.PaymentRequest) (*domain.Payment, error) {
-	// 1. Validate booking exists
+	// Validate booking exists
 	booking, err := s.bookingRepo.GetByID(ctx, req.BookingID)
 	if err != nil {
 		s.logger.Error("Booking not found", zap.Error(err))
 		return nil, fmt.Errorf("booking not found")
 	}
 
-	// 2. Check if booking is already confirmed or cancelled
+	// Check if booking is already confirmed or cancelled
 	if booking.Status == "confirmed" {
 		return nil, fmt.Errorf("booking is already paid")
 	}
@@ -53,14 +54,14 @@ func (s *paymentService) ProcessPayment(ctx context.Context, req *domain.Payment
 		return nil, fmt.Errorf("booking is cancelled")
 	}
 
-	// 3. Validate payment method
+	// Validate payment method
 	paymentMethod, err := s.paymentMethodRepo.GetByCode(ctx, req.PaymentMethod)
 	if err != nil {
 		s.logger.Error("Invalid payment method", zap.Error(err))
 		return nil, fmt.Errorf("invalid payment method")
 	}
 
-	// 4. Validate payment details (NEW - Optional)
+	// Validate payment details
 	if req.PaymentDetails == nil {
 		req.PaymentDetails = domain.PaymentDetails{}
 	}
@@ -73,7 +74,7 @@ func (s *paymentService) ProcessPayment(ctx context.Context, req *domain.Payment
 		req.PaymentDetails["payment_method"] = paymentMethod.Name
 	}
 
-	// 5. Create payment record
+	// Create payment record
 	payment := &domain.Payment{
 		BookingID:       req.BookingID,
 		PaymentMethodID: paymentMethod.ID,
@@ -90,11 +91,10 @@ func (s *paymentService) ProcessPayment(ctx context.Context, req *domain.Payment
 		return nil, fmt.Errorf("failed to process payment: %w", err)
 	}
 
-	// 6. Update booking status to confirmed
+	// Update booking status to confirmed
 	booking.Status = "confirmed"
 	if err := s.bookingRepo.Update(ctx, booking); err != nil {
 		s.logger.Error("Failed to update booking status", zap.Error(err))
-		// Payment created but booking update failed - this should be handled in production
 	}
 
 	s.logger.Info("Payment processed successfully",
@@ -104,10 +104,16 @@ func (s *paymentService) ProcessPayment(ctx context.Context, req *domain.Payment
 		zap.Any("payment_details", payment.PaymentDetails),
 	)
 
-	// 7. Get full payment details
+	// GOROUTINE: Async logging to file
+	utils.LogPaymentAsync(s.logger, req.BookingID, payment.Amount, paymentMethod.Name)
+
+	// GOROUTINE: Async update booking activity log
+	utils.LogBookingAsync(s.logger, booking.UserID, booking.BookingCode, "confirmed")
+
+	// Get full payment details
 	fullPayment, err := s.paymentRepo.GetByBookingID(ctx, req.BookingID)
 	if err != nil {
-		return payment, nil // Return basic payment if full details fail
+		return payment, nil
 	}
 
 	return fullPayment, nil

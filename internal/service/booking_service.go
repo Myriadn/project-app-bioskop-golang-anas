@@ -106,6 +106,9 @@ func (s *bookingService) CreateBooking(ctx context.Context, userID int, req *dom
 		zap.String("booking_code", bookingCode),
 	)
 
+	// GOROUTINE: Async logging to file
+	utils.LogBookingAsync(s.logger, userID, bookingCode, "created")
+
 	// Get full booking details
 	fullBooking, err := s.bookingRepo.GetByID(ctx, booking.ID)
 	if err != nil {

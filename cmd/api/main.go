@@ -73,6 +73,8 @@ func main() {
 	paymentMethodService := service.NewPaymentMethodService(paymentMethodRepo, logger.Log)
 	bookingService := service.NewBookingService(bookingRepo, showtimeRepo, seatRepo, paymentMethodRepo, logger.Log)
 	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, paymentMethodRepo, logger.Log)
+
+	backgroundService := service.NewBackgroundService(authTokenRepo, logger.Log)
 	logger.Info("Services initialized")
 
 	// Initialize Handlers
@@ -111,13 +113,16 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	//  Start background jobs
+	backgroundService.StartTokenCleanup(1 * time.Hour) // Cleanup every 1 hour
+	logger.Info("Background jobs started")
+
 	// Start server in goroutine
 	go func() {
 		logger.Info("Server starting", zap.String("address", server.Addr))
-		fmt.Printf("\n🚀 Cinema Booking API is running on http://localhost%s\n\n", server.Addr)
-		fmt.Printf("📚 Available Endpoints:\n")
-		fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-		fmt.Printf("🔓 PUBLIC ENDPOINTS:\n")
+		fmt.Printf("\nCinema Booking API is running on http://localhost%s\n\n", server.Addr)
+		fmt.Printf("Available Endpoints:\n")
+		fmt.Printf("PUBLIC ENDPOINTS:\n")
 		fmt.Printf("   GET  /health                          - Health check\n")
 		fmt.Printf("   POST /api/register                    - Register user\n")
 		fmt.Printf("   POST /api/login                       - Login user\n")
@@ -126,11 +131,10 @@ func main() {
 		fmt.Printf("   GET  /api/cinemas/{id}/seats          - Get seat availability\n")
 		fmt.Printf("   GET  /api/payment-methods             - Get payment methods\n")
 		fmt.Printf("   POST /api/pay                         - Process payment\n")
-		fmt.Printf("\n🔒 PROTECTED ENDPOINTS (Require Token):\n")
+		fmt.Printf("\nPROTECTED ENDPOINTS (Require Token):\n")
 		fmt.Printf("   POST /api/logout                      - Logout user\n")
 		fmt.Printf("   POST /api/booking                     - Create booking\n")
 		fmt.Printf("   GET  /api/user/bookings               - Get user bookings\n")
-		fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", zap.Error(err))
@@ -143,7 +147,7 @@ func main() {
 	<-quit
 
 	logger.Info("Server shutting down...")
-	fmt.Println("\n🛑 Shutting down server...")
+	fmt.Println("\nShutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -153,5 +157,5 @@ func main() {
 	}
 
 	logger.Info("Server exited gracefully")
-	fmt.Println("✅ Server stopped")
+	fmt.Println("Server stopped")
 }
