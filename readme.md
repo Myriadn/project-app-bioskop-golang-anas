@@ -6,7 +6,7 @@ Aplikasi ini bertujuan untuk membantu pengguna (customer) dalam melakukan pendaf
 
 ## Video Summary
 
-[Summary Video]()
+[Summary Video](https://drive.google.com/file/d/1hL_M6xGxl1HKiITxIZAPVI-df5dQC3cA/view?usp=sharing)
 
 ## Installation
 
