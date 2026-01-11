@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"time"
+)
 
 type Booking struct {
 	ID          int       `json:"id" db:"id"`
@@ -18,15 +22,41 @@ type Booking struct {
 	Payment  *Payment  `json:"payment,omitempty"`
 }
 
+// PaymentDetails adalah custom type untuk handle JSONB
+type PaymentDetails map[string]interface{}
+
+// Value implements driver.Valuer interface
+func (p PaymentDetails) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return json.Marshal(p)
+}
+
+// Scan implements sql.Scanner interface
+func (p *PaymentDetails) Scan(value interface{}) error {
+	if value == nil {
+		*p = nil
+		return nil
+	}
+
+	bytes, ok := value.([]byte)
+	if !ok {
+		return nil
+	}
+
+	return json.Unmarshal(bytes, p)
+}
+
 type Payment struct {
-	ID              int        `json:"id" db:"id"`
-	BookingID       int        `json:"booking_id" db:"booking_id"`
-	PaymentMethodID int        `json:"payment_method_id" db:"payment_method_id"`
-	Amount          float64    `json:"amount" db:"amount"`
-	Status          string     `json:"status" db:"status"`
-	PaymentDetails  string     `json:"payment_details,omitempty" db:"payment_details"`
-	PaidAt          *time.Time `json:"paid_at" db:"paid_at"`
-	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	ID              int            `json:"id" db:"id"`
+	BookingID       int            `json:"booking_id" db:"booking_id"`
+	PaymentMethodID int            `json:"payment_method_id" db:"payment_method_id"`
+	Amount          float64        `json:"amount" db:"amount"`
+	Status          string         `json:"status" db:"status"`
+	PaymentDetails  PaymentDetails `json:"payment_details,omitempty" db:"payment_details"`
+	PaidAt          *time.Time     `json:"paid_at" db:"paid_at"`
+	CreatedAt       time.Time      `json:"created_at" db:"created_at"`
 	// Relations
 	PaymentMethod *PaymentMethod `json:"payment_method,omitempty"`
 }
@@ -49,7 +79,7 @@ type BookingRequest struct {
 }
 
 type PaymentRequest struct {
-	BookingID      int    `json:"booking_id" validate:"required"`
-	PaymentMethod  string `json:"payment_method" validate:"required"`
-	PaymentDetails string `json:"payment_details"`
+	BookingID      int            `json:"booking_id" validate:"required"`
+	PaymentMethod  string         `json:"payment_method" validate:"required"`
+	PaymentDetails PaymentDetails `json:"payment_details"`
 }

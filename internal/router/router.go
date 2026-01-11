@@ -16,6 +16,8 @@ type Router struct {
 	cinemaHandler        *handler.CinemaHandler
 	seatHandler          *handler.SeatHandler
 	paymentMethodHandler *handler.PaymentMethodHandler
+	bookingHandler       *handler.BookingHandler
+	paymentHandler       *handler.PaymentHandler
 	authMiddleware       *middleware.AuthMiddleware
 	logger               *zap.Logger
 }
@@ -25,6 +27,8 @@ func NewRouter(
 	cinemaHandler *handler.CinemaHandler,
 	seatHandler *handler.SeatHandler,
 	paymentMethodHandler *handler.PaymentMethodHandler,
+	bookingHandler *handler.BookingHandler,
+	paymentHandler *handler.PaymentHandler,
 	authMiddleware *middleware.AuthMiddleware,
 	logger *zap.Logger,
 ) *Router {
@@ -33,6 +37,8 @@ func NewRouter(
 		cinemaHandler:        cinemaHandler,
 		seatHandler:          seatHandler,
 		paymentMethodHandler: paymentMethodHandler,
+		bookingHandler:       bookingHandler,
+		paymentHandler:       paymentHandler,
 		authMiddleware:       authMiddleware,
 		logger:               logger,
 	}
@@ -65,6 +71,9 @@ func (rt *Router) SetupRoutes() http.Handler {
 		// Payment method routes (public)
 		rt.setupPaymentMethodRoutes(r)
 
+		// Payment routes (public)
+		rt.setupPaymentRoutes(r)
+
 		// Protected routes (auth required)
 		r.Group(func(r chi.Router) {
 			r.Use(rt.authMiddleware.RequireAuth)
@@ -72,8 +81,11 @@ func (rt *Router) SetupRoutes() http.Handler {
 			// Logout
 			r.Post("/logout", rt.authHandler.Logout)
 
-			// TODO: Booking routes (akan dibuat selanjutnya)
-			// TODO: User booking history routes (akan dibuat selanjutnya)
+			// Booking routes
+			rt.setupBookingRoutes(r)
+
+			// User booking history
+			rt.setupUserRoutes(r)
 		})
 	})
 
@@ -96,4 +108,19 @@ func (rt *Router) setupCinemaRoutes(r chi.Router) {
 // setupPaymentMethodRoutes mengatur routing untuk payment methods
 func (rt *Router) setupPaymentMethodRoutes(r chi.Router) {
 	r.Get("/payment-methods", rt.paymentMethodHandler.GetAllPaymentMethods)
+}
+
+// setupPaymentRoutes mengatur routing untuk payment
+func (rt *Router) setupPaymentRoutes(r chi.Router) {
+	r.Post("/pay", rt.paymentHandler.ProcessPayment)
+}
+
+// setupBookingRoutes mengatur routing untuk booking (protected)
+func (rt *Router) setupBookingRoutes(r chi.Router) {
+	r.Post("/booking", rt.bookingHandler.CreateBooking)
+}
+
+// setupUserRoutes mengatur routing untuk user-related endpoints (protected)
+func (rt *Router) setupUserRoutes(r chi.Router) {
+	r.Get("/user/bookings", rt.bookingHandler.GetUserBookings)
 }

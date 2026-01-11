@@ -62,6 +62,8 @@ func main() {
 	showtimeRepo := repository.NewShowtimeRepository(db)
 	seatRepo := repository.NewSeatRepository(db)
 	paymentMethodRepo := repository.NewPaymentMethodRepository(db)
+	bookingRepo := repository.NewBookingRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
 	logger.Info("Repositories initialized")
 
 	// Initialize Services
@@ -69,6 +71,8 @@ func main() {
 	cinemaService := service.NewCinemaService(cinemaRepo, logger.Log)
 	seatService := service.NewSeatService(seatRepo, showtimeRepo, cinemaRepo, logger.Log)
 	paymentMethodService := service.NewPaymentMethodService(paymentMethodRepo, logger.Log)
+	bookingService := service.NewBookingService(bookingRepo, showtimeRepo, seatRepo, paymentMethodRepo, logger.Log)
+	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, paymentMethodRepo, logger.Log)
 	logger.Info("Services initialized")
 
 	// Initialize Handlers
@@ -76,6 +80,8 @@ func main() {
 	cinemaHandler := handler.NewCinemaHandler(cinemaService, logger.Log)
 	seatHandler := handler.NewSeatHandler(seatService, logger.Log)
 	paymentMethodHandler := handler.NewPaymentMethodHandler(paymentMethodService, logger.Log)
+	bookingHandler := handler.NewBookingHandler(bookingService, logger.Log)
+	paymentHandler := handler.NewPaymentHandler(paymentService, logger.Log)
 	logger.Info("Handlers initialized")
 
 	// Initialize Middlewares
@@ -88,6 +94,8 @@ func main() {
 		cinemaHandler,
 		seatHandler,
 		paymentMethodHandler,
+		bookingHandler,
+		paymentHandler,
 		authMiddleware,
 		logger.Log,
 	)
@@ -106,16 +114,23 @@ func main() {
 	// Start server in goroutine
 	go func() {
 		logger.Info("Server starting", zap.String("address", server.Addr))
-		fmt.Printf("\n🚀 Server is running on http://localhost%s\n", server.Addr)
-		fmt.Printf("📚 API Endpoints:\n")
-		fmt.Printf("   GET  http://localhost%s/health\n", server.Addr)
-		fmt.Printf("   POST http://localhost%s/api/register\n", server.Addr)
-		fmt.Printf("   POST http://localhost%s/api/login\n", server.Addr)
-		fmt.Printf("   POST http://localhost%s/api/logout (Protected)\n", server.Addr)
-		fmt.Printf("   GET  http://localhost%s/api/cinemas\n", server.Addr)
-		fmt.Printf("   GET  http://localhost%s/api/cinemas/{id}\n", server.Addr)
-		fmt.Printf("   GET  http://localhost%s/api/cinemas/{id}/seats?date=YYYY-MM-DD&time=HH:MM:SS\n", server.Addr)
-		fmt.Printf("   GET  http://localhost%s/api/payment-methods\n\n", server.Addr)
+		fmt.Printf("\n🚀 Cinema Booking API is running on http://localhost%s\n\n", server.Addr)
+		fmt.Printf("📚 Available Endpoints:\n")
+		fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+		fmt.Printf("🔓 PUBLIC ENDPOINTS:\n")
+		fmt.Printf("   GET  /health                          - Health check\n")
+		fmt.Printf("   POST /api/register                    - Register user\n")
+		fmt.Printf("   POST /api/login                       - Login user\n")
+		fmt.Printf("   GET  /api/cinemas                     - Get all cinemas\n")
+		fmt.Printf("   GET  /api/cinemas/{id}                - Get cinema detail\n")
+		fmt.Printf("   GET  /api/cinemas/{id}/seats          - Get seat availability\n")
+		fmt.Printf("   GET  /api/payment-methods             - Get payment methods\n")
+		fmt.Printf("   POST /api/pay                         - Process payment\n")
+		fmt.Printf("\n🔒 PROTECTED ENDPOINTS (Require Token):\n")
+		fmt.Printf("   POST /api/logout                      - Logout user\n")
+		fmt.Printf("   POST /api/booking                     - Create booking\n")
+		fmt.Printf("   GET  /api/user/bookings               - Get user bookings\n")
+		fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", zap.Error(err))
