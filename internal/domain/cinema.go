@@ -25,8 +25,8 @@ type Showtime struct {
 	ID        int       `json:"id" db:"id"`
 	CinemaID  int       `json:"cinema_id" db:"cinema_id"`
 	MovieID   int       `json:"movie_id" db:"movie_id"`
-	ShowDate  string    `json:"show_date" db:"show_date"`
-	ShowTime  string    `json:"show_time" db:"show_time"`
+	ShowDate  time.Time `json:"show_date" db:"show_date"`
+	ShowTime  time.Time `json:"show_time" db:"show_time"`
 	Price     float64   `json:"price" db:"price"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	// Relations

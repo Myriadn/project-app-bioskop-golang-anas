@@ -58,14 +58,24 @@ func main() {
 	// Initialize Repositories
 	userRepo := repository.NewUserRepository(db)
 	authTokenRepo := repository.NewAuthTokenRepository(db)
+	cinemaRepo := repository.NewCinemaRepository(db)
+	showtimeRepo := repository.NewShowtimeRepository(db)
+	seatRepo := repository.NewSeatRepository(db)
+	paymentMethodRepo := repository.NewPaymentMethodRepository(db)
 	logger.Info("Repositories initialized")
 
 	// Initialize Services
 	authService := service.NewAuthService(userRepo, authTokenRepo, cfg, logger.Log)
+	cinemaService := service.NewCinemaService(cinemaRepo, logger.Log)
+	seatService := service.NewSeatService(seatRepo, showtimeRepo, cinemaRepo, logger.Log)
+	paymentMethodService := service.NewPaymentMethodService(paymentMethodRepo, logger.Log)
 	logger.Info("Services initialized")
 
 	// Initialize Handlers
 	authHandler := handler.NewAuthHandler(authService, logger.Log)
+	cinemaHandler := handler.NewCinemaHandler(cinemaService, logger.Log)
+	seatHandler := handler.NewSeatHandler(seatService, logger.Log)
+	paymentMethodHandler := handler.NewPaymentMethodHandler(paymentMethodService, logger.Log)
 	logger.Info("Handlers initialized")
 
 	// Initialize Middlewares
@@ -73,8 +83,15 @@ func main() {
 	logger.Info("Middlewares initialized")
 
 	// Setup Router
-	router := router.NewRouter(authHandler, authMiddleware, logger.Log)
-	httpHandler := router.SetupRoutes()
+	appRouter := router.NewRouter(
+		authHandler,
+		cinemaHandler,
+		seatHandler,
+		paymentMethodHandler,
+		authMiddleware,
+		logger.Log,
+	)
+	httpHandler := appRouter.SetupRoutes()
 	logger.Info("Router configured")
 
 	// Create HTTP Server
@@ -90,7 +107,15 @@ func main() {
 	go func() {
 		logger.Info("Server starting", zap.String("address", server.Addr))
 		fmt.Printf("\n🚀 Server is running on http://localhost%s\n", server.Addr)
-		fmt.Printf("📚 Health check: http://localhost%s/health\n\n", server.Addr)
+		fmt.Printf("📚 API Endpoints:\n")
+		fmt.Printf("   GET  http://localhost%s/health\n", server.Addr)
+		fmt.Printf("   POST http://localhost%s/api/register\n", server.Addr)
+		fmt.Printf("   POST http://localhost%s/api/login\n", server.Addr)
+		fmt.Printf("   POST http://localhost%s/api/logout (Protected)\n", server.Addr)
+		fmt.Printf("   GET  http://localhost%s/api/cinemas\n", server.Addr)
+		fmt.Printf("   GET  http://localhost%s/api/cinemas/{id}\n", server.Addr)
+		fmt.Printf("   GET  http://localhost%s/api/cinemas/{id}/seats?date=YYYY-MM-DD&time=HH:MM:SS\n", server.Addr)
+		fmt.Printf("   GET  http://localhost%s/api/payment-methods\n\n", server.Addr)
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", zap.Error(err))
