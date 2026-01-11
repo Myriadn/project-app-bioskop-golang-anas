@@ -3,10 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"project-app-bioskop-golang-homework-anas/internal/config"
+	"project-app-bioskop-golang-homework-anas/internal/handler"
+	"project-app-bioskop-golang-homework-anas/internal/middleware"
+	"project-app-bioskop-golang-homework-anas/internal/repository"
+	"project-app-bioskop-golang-homework-anas/internal/router"
+	"project-app-bioskop-golang-homework-anas/internal/service"
 	"project-app-bioskop-golang-homework-anas/pkg/database"
 	"project-app-bioskop-golang-homework-anas/pkg/logger"
 	"project-app-bioskop-golang-homework-anas/pkg/validator"
@@ -15,130 +23,95 @@ import (
 )
 
 func main() {
-	// 1. Load Configuration
-	fmt.Println("🔧 Loading configuration...")
+	// Load Configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		fmt.Printf("❌ Failed to load config: %v\n", err)
+		fmt.Printf("Failed to load config: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("✅ Configuration loaded successfully!\n")
-	fmt.Printf("   App Name: %s\n", cfg.App.Name)
-	fmt.Printf("   App Port: %s\n", cfg.App.Port)
-	fmt.Printf("   App Env: %s\n\n", cfg.App.Env)
 
-	// 2. Initialize Logger
-	fmt.Println("📝 Initializing logger...")
+	// Initialize Logger
 	if err := logger.InitLogger(cfg.Log.Level, cfg.Log.File); err != nil {
-		fmt.Printf("❌ Failed to initialize logger: %v\n", err)
+		fmt.Printf("Failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
 	defer logger.Sync()
-	fmt.Println("✅ Logger initialized successfully!\n")
 
-	// Log dengan Zap
-	logger.Info("Application starting",
+	logger.Info("Starting Cinema Booking API",
 		zap.String("app_name", cfg.App.Name),
 		zap.String("environment", cfg.App.Env),
+		zap.String("port", cfg.App.Port),
 	)
 
-	// 3. Initialize Validator
-	fmt.Println("✔️  Initializing validator...")
+	// Initialize Validator
 	validator.InitValidator()
-	logger.Info("Validator initialized successfully")
-	fmt.Println("✅ Validator initialized successfully!\n")
+	logger.Info("Validator initialized")
 
-	// 4. Connect to Database
-	fmt.Println("🗄️  Connecting to database...")
+	// Connect to Database
 	dsn := cfg.GetDatabaseDSN()
-	logger.Info("Connecting to database", zap.String("dsn", dsn))
-
 	db, err := database.NewPostgresPool(dsn, logger.Log)
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
-		fmt.Printf("❌ Failed to connect to database: %v\n", err)
-		os.Exit(1)
 	}
 	defer database.ClosePool(db, logger.Log)
-	fmt.Println("✅ Database connected successfully!\n")
 
-	// 5. Test Database Query
-	fmt.Println("🧪 Testing database query...")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Initialize Repositories
+	userRepo := repository.NewUserRepository(db)
+	authTokenRepo := repository.NewAuthTokenRepository(db)
+	logger.Info("Repositories initialized")
+
+	// Initialize Services
+	authService := service.NewAuthService(userRepo, authTokenRepo, cfg, logger.Log)
+	logger.Info("Services initialized")
+
+	// Initialize Handlers
+	authHandler := handler.NewAuthHandler(authService, logger.Log)
+	logger.Info("Handlers initialized")
+
+	// Initialize Middlewares
+	authMiddleware := middleware.NewAuthMiddleware(authService, logger.Log)
+	logger.Info("Middlewares initialized")
+
+	// Setup Router
+	router := router.NewRouter(authHandler, authMiddleware, logger.Log)
+	httpHandler := router.SetupRoutes()
+	logger.Info("Router configured")
+
+	// Create HTTP Server
+	server := &http.Server{
+		Addr:         ":" + cfg.App.Port,
+		Handler:      httpHandler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Start server in goroutine
+	go func() {
+		logger.Info("Server starting", zap.String("address", server.Addr))
+		fmt.Printf("\n🚀 Server is running on http://localhost%s\n", server.Addr)
+		fmt.Printf("📚 Health check: http://localhost%s/health\n\n", server.Addr)
+
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Failed to start server", zap.Error(err))
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	logger.Info("Server shutting down...")
+	fmt.Println("\n🛑 Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Test query: count users
-	var userCount int
-	err = db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&userCount)
-	if err != nil {
-		logger.Error("Failed to query database", zap.Error(err))
-		fmt.Printf("❌ Failed to query database: %v\n", err)
-	} else {
-		fmt.Printf("✅ Database query successful! Users count: %d\n\n", userCount)
-		logger.Info("Database query successful", zap.Int("user_count", userCount))
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Fatal("Server forced to shutdown", zap.Error(err))
 	}
 
-	// Test query: count cinemas
-	var cinemaCount int
-	err = db.QueryRow(ctx, "SELECT COUNT(*) FROM cinemas").Scan(&cinemaCount)
-	if err != nil {
-		logger.Error("Failed to query cinemas", zap.Error(err))
-		fmt.Printf("❌ Failed to query cinemas: %v\n", err)
-	} else {
-		fmt.Printf("✅ Cinemas in database: %d\n", cinemaCount)
-		logger.Info("Cinemas loaded", zap.Int("cinema_count", cinemaCount))
-	}
-
-	// Test query: count movies
-	var movieCount int
-	err = db.QueryRow(ctx, "SELECT COUNT(*) FROM movies").Scan(&movieCount)
-	if err != nil {
-		logger.Error("Failed to query movies", zap.Error(err))
-		fmt.Printf("❌ Failed to query movies: %v\n", err)
-	} else {
-		fmt.Printf("✅ Movies in database: %d\n", movieCount)
-		logger.Info("Movies loaded", zap.Int("movie_count", movieCount))
-	}
-
-	// Test query: count seats
-	var seatCount int
-	err = db.QueryRow(ctx, "SELECT COUNT(*) FROM seats").Scan(&seatCount)
-	if err != nil {
-		logger.Error("Failed to query seats", zap.Error(err))
-		fmt.Printf("❌ Failed to query seats: %v\n", err)
-	} else {
-		fmt.Printf("✅ Seats in database: %d\n", seatCount)
-		logger.Info("Seats loaded", zap.Int("seat_count", seatCount))
-	}
-
-	// Test query: count payment methods
-	var paymentMethodCount int
-	err = db.QueryRow(ctx, "SELECT COUNT(*) FROM payment_methods").Scan(&paymentMethodCount)
-	if err != nil {
-		logger.Error("Failed to query payment methods", zap.Error(err))
-		fmt.Printf("❌ Failed to query payment methods: %v\n", err)
-	} else {
-		fmt.Printf("✅ Payment methods in database: %d\n\n", paymentMethodCount)
-		logger.Info("Payment methods loaded", zap.Int("payment_method_count", paymentMethodCount))
-	}
-
-	// 6. Summary
-	fmt.Println("=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=")
-	fmt.Println("🎉 ALL SYSTEMS READY!")
-	fmt.Println("=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=")
-	fmt.Printf("📦 Database Summary:\n")
-	fmt.Printf("   - Users: %d\n", userCount)
-	fmt.Printf("   - Cinemas: %d\n", cinemaCount)
-	fmt.Printf("   - Movies: %d\n", movieCount)
-	fmt.Printf("   - Seats: %d\n", seatCount)
-	fmt.Printf("   - Payment Methods: %d\n", paymentMethodCount)
-	fmt.Println("=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=" + "=")
-	fmt.Println()
-
-	logger.Info("Foundation test completed successfully! Ready to build the API! 🚀")
-
-	fmt.Println("✨ Foundation setup is complete!")
-	fmt.Println("🚀 Ready to implement Auth System (register, login, logout)")
-	fmt.Println()
-	fmt.Println("Press Ctrl+C to exit...")
+	logger.Info("Server exited gracefully")
+	fmt.Println("✅ Server stopped")
 }
