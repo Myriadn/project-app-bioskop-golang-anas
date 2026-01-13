@@ -70,7 +70,7 @@ func main() {
 	// Initialize Repositories
 	userRepo := repository.NewUserRepository(db)
 	authTokenRepo := repository.NewAuthTokenRepository(db)
-	otpRepo := repository.NewOTPRepository(db) // ← ADDED
+	otpRepo := repository.NewOTPRepository(db)
 	cinemaRepo := repository.NewCinemaRepository(db)
 	showtimeRepo := repository.NewShowtimeRepository(db)
 	seatRepo := repository.NewSeatRepository(db)
@@ -80,14 +80,14 @@ func main() {
 	logger.Info("Repositories initialized")
 
 	// Initialize Services
-	otpService := service.NewOTPService(otpRepo, userRepo, emailService, logger.Log)            // ← ADDED
-	authService := service.NewAuthService(userRepo, authTokenRepo, otpService, cfg, logger.Log) // ← MODIFIED
+	otpService := service.NewOTPService(otpRepo, userRepo, emailService, logger.Log)            
+	authService := service.NewAuthService(userRepo, authTokenRepo, otpService, cfg, logger.Log) 
 	cinemaService := service.NewCinemaService(cinemaRepo, logger.Log)
 	seatService := service.NewSeatService(seatRepo, showtimeRepo, cinemaRepo, logger.Log)
 	paymentMethodService := service.NewPaymentMethodService(paymentMethodRepo, logger.Log)
 	bookingService := service.NewBookingService(bookingRepo, showtimeRepo, seatRepo, paymentMethodRepo, logger.Log)
 	paymentService := service.NewPaymentService(paymentRepo, bookingRepo, paymentMethodRepo, logger.Log)
-	backgroundService := service.NewBackgroundService(authTokenRepo, otpRepo, logger.Log) // ← MODIFIED
+	backgroundService := service.NewBackgroundService(authTokenRepo, otpRepo, logger.Log) 
 	logger.Info("Services initialized")
 
 	// Initialize Handlers
